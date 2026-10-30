@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AutoFleet AI Guard - NVIDIA x Nebius AI Hackathon</title>
+  <style>
+    :root {
+      --nvidia-green: #76B900;
+      --nvidia-dark: #0f1115;
+      --panel-bg: rgba(22, 26, 34, 0.85);
+      --panel-border: rgba(118, 185, 0, 0.25);
+      --text-main: #f0f4f8;
+      --text-muted: #8a99ad;
+      --accent-red: #ff4757;
+      --accent-yellow: #ffa502;
+      --accent-blue: #00d2d3;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--nvidia-dark);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Top Navigation Header */
+    header {
+      background: rgba(15, 17, 21, 0.95);
+      border-bottom: 1px solid var(--panel-border);
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 100;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-logo {
+      width: 24px;
+      height: 24px;
+      background: var(--nvidia-green);
+      border-radius: 4px;
+      display: inline-block;
+      box-shadow: 0 0 10px rgba(118, 185, 0, 0.6);
+    }
+    .brand-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .brand-subtitle {
+      font-size: 0.75rem;
+      color: var(--nvidia-green);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .telemetry-pills {
+      display: flex;
+      gap: 16px;
+    }
+    .pill {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .pill-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--nvidia-green);
+      box-shadow: 0 0 8px var(--nvidia-green);
+      animation: pulse 2s infinite;
+    }
+
+    /* Main Content Dashboard */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      grid-template-rows: 1fr 240px;
+      flex: 1;
+      gap: 12px;
+      padding: 12px;
+      height: calc(100vh - 65px);
+    }
+
+    /* Map Canvas Section */
+    .map-container {
+      grid-column: 1;
+      grid-row: 1 / 3;
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+    canvas#fleetMap {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .map-overlay-controls {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      display: flex;
+      gap: 8px;
+      z-index: 10;
+    }
+    .btn {
+      background: rgba(15, 17, 21, 0.85);
+      border: 1px solid var(--panel-border);
+      color: var(--text-main);
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn:hover {
+      background: var(--nvidia-green);
+      color: #000;
+      box-shadow: 0 0 12px rgba(118, 185, 0, 0.4);
+    }
+    .btn-hazard {
+      border-color: rgba(255, 71, 87, 0.4);
+    }
+    .btn-hazard:hover {
+      background: var(--accent-red);
+      color: #fff;
+      box-shadow: 0 0 12px rgba(255, 71, 87, 0.4);
+    }
+
+    /* Vehicle Telemetry Drawer */
+    .telemetry-panel {
+      grid-column: 2;
+      grid-row: 1;
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow-y: auto;
+    }
+    .section-title {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 6px;
+    }
+    .metric-card {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 10px;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .metric-val {
+      font-family: monospace;
+      font-size: 1rem;
+      color: var(--nvidia-green);
+    }
+
+    /* Terminal Console */
+    .terminal-panel {
+      grid-column: 2;
+      grid-row: 2;
+      background: #08090c;
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      padding: 12px;
+      font-family: "Courier New", Courier, monospace;
+      font-size: 0.78rem;
+      display: flex;
+      flex-direction: column;
+    }
+    .terminal-header {
+      display: flex;
+      justify-content: space-between;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      font-size: 0.7rem;
+    }
+    .terminal-logs {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .log-line { line-height: 1.3; }
+    .log-time { color: var(--text-muted); margin-right: 6px; }
+    .log-agent { color: var(--accent-blue); font-weight: bold; }
+    .log-cuopt { color: var(--nvidia-green); }
+    .log-warn { color: var(--accent-yellow); }
+
+    @keyframes pulse {
+      0% { opacity: 0.4; }
+      50% { opacity: 1; }
+      100% { opacity: 0.4; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <span class="brand-logo"></span>
+      <div>
+        <div class="brand-title">AutoFleet AI Guard</div>
+        <div class="brand-subtitle">NVIDIA x Nebius Agent Dispatch</div>
+      </div>
+    </div>
+    <div class="telemetry-pills">
+      <div class="pill"><span class="pill-indicator"></span> Nebius Token Stream: 1,420 t/s</div>
+      <div class="pill">NVIDIA NIM: Llama-3-Nemotron</div>
+      <div class="pill">cuOpt Engine: Active (0.8ms)</div>
+    </div>
+  </header>
+
+  <div class="dashboard-grid">
+    <!-- Interactive Map -->
+    <div class="map-container">
+      <div class="map-overlay-controls">
+        <button class="btn" onclick="toggleSim()">Pause / Resume</button>
+        <button class="btn btn-hazard" onclick="injectHazard()">Inject Road Hazard</button>
+        <button class="btn" onclick="triggerOptimization()">Force cuOpt Re-Route</button>
+      </div>
+      <canvas id="fleetMap"></canvas>
+    </div>
+
+    <!-- Vehicle Details Panel -->
+    <div class="telemetry-panel">
+      <div class="section-title">Active Rover Telemetry</div>
+      <div class="metric-card">
+        <span>Unit ID</span>
+        <span class="metric-val" id="unitId">ROVER-ALPHA-01</span>
+      </div>
+      <div class="metric-card">
+        <span>Status</span>
+        <span class="metric-val" id="unitStatus" style="color: var(--nvidia-green);">OPTIMAL</span>
+      </div>
+      <div class="metric-card">
+        <span>Battery Reserve</span>
+        <span class="metric-val" id="unitBattery">92%</span>
+      </div>
+      <div class="metric-card">
+        <span>Target Coordinate</span>
+        <span class="metric-val" id="unitTarget">37.7749° N, -122.4194° W</span>
+      </div>
+
+      <div class="section-title" style="margin-top: 8px;">Reasoning Trace (Nemotron NIM)</div>
+      <div id="reasoningBox" style="font-size: 0.8rem; color: var(--text-muted); background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px; height: 120px; overflow-y: auto;">
+        Analyzing real-time sensor streams... Path clears optimized by cuOpt GPU solver. No dynamic obstacles currently detected in primary route.
+      </div>
+    </div>
+
+    <!-- Live Execution Terminal -->
+    <div class="terminal-panel">
+      <div class="terminal-header">
+        <span>AGENT EXECUTION STREAM</span>
+        <span>NEBIUS CLUSTER: SFI-02</span>
+      </div>
+      <div class="terminal-logs" id="terminalLogs">
+        <div class="log-line"><span class="log-time">[10:14:02]</span> <span class="log-agent">[AGENT]</span> System initialized. Subscribed to telemetry streams.</div>
+        <div class="log-line"><span class="log-time">[10:14:03]</span> <span class="log-cuopt">[cuOpt]</span> Distance matrix cached in GPU memory (V100/H100).</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('fleetMap');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+      canvas.width = canvas.parentElement.clientWidth;
+      canvas.height = canvas.parentElement.clientHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    let running = true;
+    let rovers = [
+      { id: 'ROVER-ALPHA-01', x: 100, y: 150, tx: 500, ty: 400, color: '#76B900', path: [] },
+      { id: 'ROVER-BETA-02', x: 600, y: 100, tx: 200, ty: 350, color: '#00d2d3', path: [] }
+    ];
+
+    let hazards = [];
+
+    function addLog(source, msg, type = '') {
+      const logs = document.getElementById('terminalLogs');
+      const time = new Date().toLocaleTimeString();
+      const div = document.createElement('div');
+      div.className = 'log-line';
+      let tagClass = 'log-agent';
+      if (source === 'cuOpt') tagClass = 'log-cuopt';
+      if (type === 'warn') tagClass = 'log-warn';
+      
+      div.innerHTML = `<span class="log-time">[${time}]</span> <span class="${tagClass}">[${source}]</span> ${msg}`;
+      logs.appendChild(div);
+      logs.scrollTop = logs.scrollHeight;
+    }
+
+    function toggleSim() {
+      running = !running;
+      addLog('SYS', running ? 'Simulation resumed.' : 'Simulation paused.');
+    }
+
+    function injectHazard() {
+      const hX = Math.random() * (canvas.width - 200) + 100;
+      const hY = Math.random() * (canvas.height - 200) + 100;
+      hazards.push({ x: hX, y: hY, radius: 40 });
+      addLog('SENSOR', `Hazard detected at (${Math.round(hX)}, ${Math.round(hY)})!`, 'warn');
+      document.getElementById('reasoningBox').innerText = `WARNING: Dynamic obstruction detected near coordinate [${Math.round(hX)}, ${Math.round(hY)}]. Requesting instant route recalculation via NVIDIA cuOpt NIM...`;
+      triggerOptimization();
+    }
+
+    function triggerOptimization() {
+      addLog('cuOpt', 'Executing GPU parallel path optimization solver...');
+      setTimeout(() => {
+        addLog('cuOpt', 'Optimal detour calculated in 0.62ms. Routes updated.');
+        document.getElementById('unitStatus').innerText = 'DETOUR ACTIVE';
+        document.getElementById('unitStatus').style.color = '#ffa502';
+      }, 400);
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Grid Pattern
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < canvas.width; x += 40) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+      }
+      for (let y = 0; y < canvas.height; y += 40) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+      }
+
+      // Draw Hazards
+      hazards.forEach(h => {
+        ctx.fillStyle = 'rgba(255, 71, 87, 0.2)';
+        ctx.strokeStyle = '#ff4757';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(h.x, h.y, h.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      });
+
+      // Draw Rovers & Paths
+      rovers.forEach(r => {
+        if (running) {
+          r.x += (r.tx - r.x) * 0.005;
+          r.y += (r.ty - r.y) * 0.005;
+        }
+
+        // Target Line
+        ctx.strokeStyle = r.color;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(r.x, r.y);
+        ctx.lineTo(r.tx, r.ty);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Target Marker
+        ctx.fillStyle = r.color;
+        ctx.beginPath();
+        ctx.arc(r.tx, r.ty, 6, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Rover Body
+        ctx.fillStyle = r.color;
+        ctx.shadowColor = r.color;
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(r.x, r.y, 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      });
+
+      requestAnimationFrame(render);
+    }
+
+    render();
+  </script>
+</body>
+          </html>
+          
